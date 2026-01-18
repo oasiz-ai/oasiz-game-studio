@@ -27,6 +27,12 @@ Welcome to the Oasiz Game Studio! This guide will help you create high-quality g
 
 ## Getting Started
 
+### Choose a Game from the Backlog
+
+Check out the **[Game Backlog](./BACKLOG.md)** for a list of games you can build. Pick one that interests you and confirm with the Oasiz team before starting to avoid overlap with other developers.
+
+### Two Paths to Create a Game
+
 You have two paths to create a game:
 
 ### Option 1: Start from Scratch
