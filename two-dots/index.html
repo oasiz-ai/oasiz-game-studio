@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, minimal-ui">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Two Dots</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@500;600&family=Nunito:wght@400;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            font-family: 'Press Start 2P', monospace;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 420px;
+            max-height: 750px;
+            background: #1a1a2e;
+            overflow: hidden;
+            border-radius: 24px;
+            border: 6px solid #000;
+            box-shadow: 0 0 0 4px #333, 0 25px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        @media (pointer: coarse) {
+            #game-container {
+                max-width: none;
+                max-height: none;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            html, body {
+                background: #1a1a2e;
+            }
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .settings-btn {
+            position: absolute;
+            top: 45px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            border: none;
+            background: #f0f0f1;
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), inset 0 -4px 0 rgba(0, 0, 0, 0.15);
+            transition: transform 0.1s;
+            color: #888888;
+        }
+
+        .settings-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .settings-btn:active {
+            transform: scale(0.95);
+        }
+
+        .settings-btn.hidden {
+            display: none;
+        }
+
+        @media (pointer: coarse) {
+            .settings-btn {
+                top: 120px;
+                width: 55px;
+                height: 55px;
+            }
+            .settings-btn svg {
+                width: 22px;
+                height: 22px;
+            }
+        }
+
+        .settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: auto;
+            padding: 0 40px;
+            animation: settings-backdrop-in 0.3s ease-out;
+        }
+
+        .settings-modal.closing {
+            animation: settings-backdrop-out 0.3s ease-in forwards;
+        }
+
+        @keyframes settings-backdrop-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes settings-backdrop-out {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .settings-content {
+            background: #FFFFFF;
+            border-radius: 24px;
+            padding: 32px 40px;
+            max-width: 320px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: settings-slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .settings-modal.closing .settings-content {
+            animation: settings-slide-out 0.3s ease-in forwards;
+        }
+
+        @keyframes settings-slide-in {
+            0% {
+                transform: translateY(-150px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes settings-slide-out {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-150px);
+                opacity: 0;
+            }
+        }
+
+        .settings-content h2 {
+            font-size: 28px;
+            margin-bottom: 24px;
+            color: #1a1a2e;
+            text-align: center;
+        }
+
+        .settings-toggle {
+            margin-bottom: 20px;
+        }
+
+        .settings-toggle label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 20px;
+            color: #1a1a2e;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+        }
+
+        .settings-toggle input[type="checkbox"] {
+            width: 48px;
+            height: 28px;
+            appearance: none;
+            background: #E0E0E0;
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .settings-toggle input[type="checkbox"]:checked {
+            background: #44FF44;
+        }
+
+        .settings-toggle input[type="checkbox"]::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .settings-toggle input[type="checkbox"]:checked::after {
+            transform: translateX(20px);
+        }
+
+        .close-btn {
+            width: 100%;
+            padding: 14px 24px;
+            margin-top: 16px;
+            background: #8CC8A4;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 50px;
+            font-size: 20px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.15);
+            transition: all 0.15s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .close-btn::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: -60%;
+            width: 35%;
+            height: 200%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                transparent 35%,
+                rgba(255, 255, 255, 0.5) 35%,
+                rgba(255, 255, 255, 0.5) 65%,
+                transparent 65%,
+                transparent 100%
+            );
+            transform: translateY(-50%) rotate(-45deg);
+            animation: close-btn-shine 5s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes close-btn-shine {
+            0% { left: 120%; }
+            10% { left: -60%; }
+            100% { left: -60%; }
+        }
+
+        .close-btn:hover {
+            background: #9DD4B3;
+        }
+
+        .close-btn:active {
+            transform: translateY(2px);
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        .close-btn:active::before {
+            animation: none;
+        }
+
+        .back-btn-settings {
+            width: 100%;
+            padding: 14px 24px;
+            margin-top: 16px;
+            background: #E0E0E0;
+            color: #555555;
+            border: none;
+            border-radius: 50px;
+            font-size: 20px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.15);
+            transition: all 0.15s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .back-btn-settings::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: -60%;
+            width: 35%;
+            height: 200%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                transparent 35%,
+                rgba(255, 255, 255, 0.5) 35%,
+                rgba(255, 255, 255, 0.5) 65%,
+                transparent 65%,
+                transparent 100%
+            );
+            transform: translateY(-50%) rotate(-45deg);
+            animation: back-btn-settings-shine 5s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes back-btn-settings-shine {
+            0% { left: 120%; }
+            10% { left: -60%; }
+            100% { left: -60%; }
+        }
+
+        .back-btn-settings:hover {
+            background: #D0D0D0;
+        }
+
+        .back-btn-settings:active {
+            transform: translateY(2px);
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        .back-btn-settings:active::before {
+            animation: none;
+        }
+
+        /* Win Modal Styles */
+        .win-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: auto;
+            padding: 0 40px;
+            animation: settings-backdrop-in 0.3s ease-out;
+            overflow: hidden;
+        }
+
+        .win-modal.closing {
+            animation: settings-backdrop-out 0.3s ease-in forwards;
+        }
+
+        .win-content {
+            background: #FFFFFF;
+            border-radius: 24px;
+            padding: 32px 40px;
+            padding-top: 50px;
+            max-width: 320px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: settings-slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .win-modal.closing .win-content {
+            animation: settings-slide-out 0.3s ease-in forwards;
+        }
+
+        .win-crown {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(255, 165, 0, 0.4);
+            animation: crown-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+        }
+
+        @keyframes crown-bounce {
+            0% {
+                transform: translateX(-50%) scale(0) rotate(-20deg);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(-50%) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        .win-crown svg {
+            width: 40px;
+            height: 40px;
+            color: #FFFFFF;
+        }
+
+        .win-content h2 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #44FF44;
+            text-align: center;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+        }
+
+        .win-content .score-text {
+            font-size: 18px;
+            color: #555555;
+            text-align: center;
+            margin-bottom: 24px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+        }
+
+        .win-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .win-btn {
+            width: 100%;
+            padding: 14px 20px;
+            background: #8CC8A4;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.15);
+            transition: all 0.15s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .win-btn::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: -60%;
+            width: 35%;
+            height: 200%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                transparent 35%,
+                rgba(255, 255, 255, 0.5) 35%,
+                rgba(255, 255, 255, 0.5) 65%,
+                transparent 65%,
+                transparent 100%
+            );
+            transform: translateY(-50%) rotate(-45deg);
+            animation: win-btn-shine 5s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes win-btn-shine {
+            0% { left: 120%; }
+            10% { left: -60%; }
+            100% { left: -60%; }
+        }
+
+        .win-btn:hover {
+            background: #9DD4B3;
+        }
+
+        .win-btn:active {
+            transform: translateY(2px);
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        .win-btn:active::before {
+            animation: none;
+        }
+
+        .win-btn.secondary {
+            background: #E0E0E0;
+            color: #555555;
+        }
+
+        .win-btn.secondary:hover {
+            background: #D0D0D0;
+        }
+
+        /* Confetti Styles */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            pointer-events: none;
+        }
+
+        .confetti.square {
+            border-radius: 2px;
+        }
+
+        .confetti.circle {
+            border-radius: 50%;
+        }
+
+        .confetti.strip {
+            width: 4px;
+            height: 16px;
+            border-radius: 2px;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .start-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, 90px);
+            width: 200px;
+            box-sizing: border-box;
+            padding: 14px 24px;
+            background: #8CC8A4;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 50px;
+            font-size: 22px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 900;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.15);
+            transition: all 0.15s ease;
+            overflow: hidden;
+        }
+
+        .start-btn::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: -60%;
+            width: 35%;
+            height: 200%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                transparent 35%,
+                rgba(255, 255, 255, 0.5) 35%,
+                rgba(255, 255, 255, 0.5) 65%,
+                transparent 65%,
+                transparent 100%
+            );
+            transform: translateY(-50%) rotate(-45deg);
+            animation: start-btn-shine 5s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes start-btn-shine {
+            0% { left: 120%; }
+            10% { left: -60%; }
+            100% { left: -60%; }
+        }
+
+        .start-btn:hover {
+            background: #9DD4B3;
+        }
+
+        .start-btn:active {
+            transform: translate(-50%, 92px);
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        .start-btn:active::before {
+            animation: none;
+        }
+
+        .start-btn.hidden {
+            display: none;
+        }
+
+        .start-btn .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            animation: ripple-expand 1s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes ripple-expand {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        @media (pointer: coarse) {
+            .start-btn {
+                font-size: 20px;
+                padding: 14px 24px;
+            }
+        }
+
+        .back-btn {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            box-sizing: border-box;
+            padding: 14px 24px;
+            background: #8CC8A4;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 50px;
+            font-size: 22px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 900;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.15);
+            transition: all 0.15s ease;
+            overflow: hidden;
+        }
+
+        .back-btn::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: -60%;
+            width: 35%;
+            height: 200%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                transparent 35%,
+                rgba(255, 255, 255, 0.5) 35%,
+                rgba(255, 255, 255, 0.5) 65%,
+                transparent 65%,
+                transparent 100%
+            );
+            transform: translateY(-50%) rotate(-45deg);
+            animation: back-btn-shine 5s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes back-btn-shine {
+            0% { left: 120%; }
+            10% { left: -60%; }
+            100% { left: -60%; }
+        }
+
+        .back-btn:hover {
+            background: #9DD4B3;
+        }
+
+        .back-btn:active {
+            transform: translateX(-50%) translateY(2px);
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        .back-btn:active::before {
+            animation: none;
+        }
+
+        .back-btn.hidden {
+            display: none;
+        }
+
+        @media (pointer: coarse) {
+            .back-btn {
+                font-size: 20px;
+                padding: 14px 24px;
+                bottom: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <button id="start-btn" class="start-btn">Start</button>
+        <button id="back-btn" class="back-btn hidden">Level</button>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
