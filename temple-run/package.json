@@ -10,14 +10,13 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write 'src/**/*.{ts,tsx,css,html}'"
   },
-  "dependencies": {
-    "three": "^0.171.0"
-  },
   "devDependencies": {
-    "@types/three": "^0.171.0",
     "prettier": "^3.7.4",
     "typescript": "^5.9.3",
     "vite": "^7.3.0",
     "vite-plugin-singlefile": "^2.0.3"
+  },
+  "dependencies": {
+    "three": "^0.162.0"
   }
 }

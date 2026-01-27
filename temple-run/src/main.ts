@@ -26,9 +26,9 @@ const CONFIG = {
   CAM_FOV: 75,
 
   // Player
-  PLAYER_SPEED_START: 14,
-  PLAYER_SPEED_MAX: 22,
-  PLAYER_SPEED_INCREMENT: 0.005,
+  PLAYER_SPEED_START: 5,
+  PLAYER_SPEED_MAX: 10,
+  PLAYER_SPEED_INCREMENT: 0.002,
 
   // Turn mechanics
   SEGMENTS_BETWEEN_TURNS_MIN: 6,
@@ -1181,16 +1181,10 @@ function addSegmentAhead(): void {
 function addCoinsToSegment(seg: PathSegment): void {
   const dirVec = getDirVector(seg.dir);
   
-  // Skip coins on turn segments (they're too short/confusing)
-  if (seg.type === "turn") return;
-  
-  // Add coins 90% of the time (increased from 85%)
-  if (Math.random() > 0.90) return;
-
-  // Add a row of 5-8 coins in a line
-  const numCoins = 5 + Math.floor(Math.random() * 4);
-  const startT = 0.15;
-  const coinSpacing = 0.7 / numCoins;
+  // Always add coins on every segment (simple and reliable)
+  const numCoins = 5;
+  const startT = 0.1;
+  const coinSpacing = 0.8 / numCoins;
   
   
   for (let i = 0; i < numCoins; i++) {
@@ -1267,39 +1261,31 @@ function addCoinsToSegment(seg: PathSegment): void {
 }
 
 function addObstacleToSegment(seg: PathSegment): void {
-  // Don't add obstacles to turn segments
+  // Don't add obstacles to turn segments - reset spacing counter
   if (seg.type === "turn") {
-    // Reset the flag when we hit a turn - allows one obstacle in next straight section
     obstacleAddedSinceLastTurn = false;
     return;
   }
   
-  // Don't add obstacles in the first 8 segments (give player time to start)
-  if (totalSegmentsGenerated < 8) return;
+  // Don't add obstacles in the first 5 segments (give player time to start)
+  if (seg.id < 5) return;
   
   // Only one obstacle per segment
   if (seg.hasObstacle) return;
   
-  // Only one obstacle between turns
+  // Only ONE obstacle between turns (spread them out)
   if (obstacleAddedSinceLastTurn) return;
   
-  // Check if this is the FIRST or LAST segment before/after a turn
-  // We need to check if previous segment was a turn (this is first after turn)
-  // Or if this segment is right before an upcoming turn (last before turn)
+  // Skip first 4 segments after a turn (give player time to see obstacles)
   const segIndex = segments.findIndex(s => s.id === seg.id);
-  const prevSeg = segIndex > 0 ? segments[segIndex - 1] : null;
-  
-  // Skip if previous segment was a turn (too close to turn start)
-  if (prevSeg && prevSeg.type === "turn") {
-    return;
+  for (let i = 1; i <= 4; i++) {
+    if (segIndex >= i) {
+      const prevSeg = segments[segIndex - i];
+      if (prevSeg && prevSeg.type === "turn") return;
+    }
   }
   
-  // Skip if only 1-2 segments since last turn (allow some buffer)
-  if (segmentsSinceLastTurn <= 2) {
-    return;
-  }
-  
-  // 50% chance to add an obstacle in this segment (but only one per turn section)
+  // 50% chance to add an obstacle in this section
   if (Math.random() > 0.50) return;
   
   seg.hasObstacle = true;
@@ -1307,9 +1293,8 @@ function addObstacleToSegment(seg: PathSegment): void {
   
   const dirVec = getDirVector(seg.dir);
   
-  // Position obstacle in middle portion of segment (0.4-0.6 range)
-  // This keeps it safely away from turns at both ends
-  const t = 0.4 + Math.random() * 0.2;
+  // Position obstacle in middle of segment
+  const t = 0.5;
   const obsX = seg.x1 + dirVec.x * CONFIG.SEGMENT_LENGTH * t;
   const obsZ = seg.z1 + dirVec.z * CONFIG.SEGMENT_LENGTH * t;
   
@@ -1582,23 +1567,19 @@ function spawnEnemyBehindPlayer(distanceOverride?: number): void {
 }
 
 function checkObstacleCollision(): void {
-  const playerRadius = 25;
-  
-  // Calculate actual player position with lane offset (same formula as updatePlayerMesh)
-  const perpX = -Math.cos(playerDir);
-  const perpZ = -Math.sin(playerDir);
-  const actualX = playerX + perpX * actualLaneOffset;
-  const actualZ = playerZ + perpZ * actualLaneOffset;
+  // Obstacles span full path width, so check distance along path direction only
+  // Use player's CENTER position (not lane offset) since obstacles are full-width
   
   for (const obs of obstacles) {
     if (obs.hit) continue;
     
-    const dx = actualX - obs.x;
-    const dz = actualZ - obs.z;
+    // Distance from player center to obstacle center
+    const dx = playerX - obs.x;
+    const dz = playerZ - obs.z;
     const dist = Math.sqrt(dx * dx + dz * dz);
     
-    // Smaller collision radius for more forgiving gameplay
-    if (dist < playerRadius + 40) {
+    // Check if player is close enough to obstacle (within ~50 units)
+    if (dist < 50) {
       // Check if player avoided obstacle correctly
       if (obs.type === "jump") {
         // Need to be jumping (high enough) to avoid - barrier is ~40 units tall
@@ -2094,30 +2075,18 @@ function cleanupAndGenerate(): void {
     return true;
   });
 
-  // Remove collected/old coins - use simple distance only
-  // Don't use direction-based removal as it incorrectly removes coins after turns
+  // Remove collected coins only - keep all uncollected coins
   coins = coins.filter((coin) => {
-    if (coin.collected) return false;
-    
-    const dx = coin.x - playerX;
-    const dz = coin.z - playerZ;
-    const dist = Math.sqrt(dx * dx + dz * dz);
-    
-    // Only remove if very far away (regardless of direction)
-    // After turns, coins in other corridors should persist
-    if (dist > CONFIG.SEGMENT_LENGTH * 8) {
+    if (coin.collected) {
       if (coin.mesh) scene.remove(coin.mesh);
       return false;
     }
     return true;
   });
   
-  // Remove old obstacles
+  // Remove hit obstacles only - keep all others
   obstacles = obstacles.filter((obs) => {
-    const dx = obs.x - playerX;
-    const dz = obs.z - playerZ;
-    const dist = Math.sqrt(dx * dx + dz * dz);
-    if (dist > CONFIG.SEGMENT_LENGTH * 10 || obs.hit) {
+    if (obs.hit) {
       if (obs.mesh) scene.remove(obs.mesh);
       return false;
     }

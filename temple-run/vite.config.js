@@ -6,6 +6,7 @@ export default defineConfig({
   build: {
     target: "esnext",
     minify: true,
+    // Ensure everything is inlined into a single file
     assetsInlineLimit: 100000000,
     cssCodeSplit: false,
     rollupOptions: {
@@ -14,5 +15,6 @@ export default defineConfig({
       },
     },
   },
+  // Suppress warnings during build
   logLevel: "warn",
 });
