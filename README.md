@@ -267,11 +267,78 @@ Asset files will be hosted at `https://assets.oasiz.ai/ when importing your game
 
 ```bash
 # Build your game (run from game folder, not root)
-cd games/your-game-name
+cd your-game-name
 bun run build
 
 # Output goes to dist/index.html
 ```
+
+### Upload to Test on the Oasiz App
+
+You can upload your game directly to test it on the Oasiz platform before submitting a PR.
+
+PLEASE TEST ON THE OASIZ APP FOR PERFORMANCE, TESTING ON WEBBROWSER OR SIMULATOR IS NOT ENOUGH.
+
+#### 1. Set Up Environment Variables
+
+Create a `.env` file in the root directory (or set these in your shell):
+
+Easiest way is to just copy env.example directly and change the email to your account email (the email that is used to create your account)
+
+```bash
+# Required - get these from the Oasiz team
+OASIZ_UPLOAD_TOKEN=your_upload_token
+OASIZ_EMAIL=your-registered-email@example.com
+
+# Optional - defaults to production API
+# OASIZ_API_URL=http://localhost:3001/api/upload/game
+
+
+```
+
+#### 2. (Optional) Create a publish.json
+
+Add a `publish.json` file in your game folder for metadata:
+
+```json
+{
+  "title": "Your Game Title",
+  "description": "A brief description of your game",
+  "category": "arcade"
+}
+```
+
+Categories: `arcade`, `puzzle`, `party`, `action`, `strategy`, `casual`
+
+If you skip this file, defaults will be used (folder name as title, "test" for description/category).
+
+#### 3. Upload Your Game
+
+```bash
+# From the repo root directory
+bun run upload your-game-name
+
+# Or with options:
+bun run upload your-game-name --skip-build  # Use existing dist/
+bun run upload your-game-name --dry-run     # Test without uploading
+
+# List all available games
+bun run upload --list
+```
+
+The upload script will:
+1. Build your game (install deps + vite build)
+2. Read the bundled HTML from `dist/index.html`
+3. Include thumbnail if `thumbnail/` folder exists
+4. Upload to the Oasiz platform
+
+#### 4. Test on the App
+
+Once uploaded, your game will be available in the Oasiz app for testing. Check that:
+- The game loads correctly
+- Touch controls work on mobile
+- Score submission works
+- The overall experience matches your local testing
 
 ### Testing Checklist
 - [ ] Works on mobile (touch controls)
